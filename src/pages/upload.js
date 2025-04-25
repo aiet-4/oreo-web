@@ -1,7 +1,7 @@
 import React, { useEffect, useState, useCallback, useRef } from "react";
 import Webcam from "react-webcam";
 import { useRouter } from 'next/router';
-import { Grid , Typography, IconButton } from '@mui/material';
+import { Grid , Typography } from '@mui/material';
 import CircularProgress from '@mui/material/CircularProgress';
 import Button from '@mui/material/Button';
 import { styled, keyframes } from '@mui/material/styles';
@@ -391,7 +391,8 @@ const Upload = () => {
                         borderLeft: pushUpload ? 0 : "3px solid #fff",
                         borderRight: pushUpload ? 0 : "3px solid #fff",
                         backgroundColor: secondaryColor,
-                        transition: "all 0.7s ease-in-out"
+                        transition: "all 0.7s ease-in-out",
+                        pointerEvents : pushUpload ? "none" : "auto"
                     }}
                     >
                     <p 
