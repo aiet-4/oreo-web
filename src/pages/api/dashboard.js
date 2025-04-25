@@ -8,5 +8,5 @@ export default function fetchAllFiles() {
     redirect: "follow"
   };
 
-  return fetch("http://216.48.190.50:8080/getAllFiles", requestOptions);
+  return fetch("https://a274ba2959052.notebooks.jarvislabs.net/getAllFiles", requestOptions);
 }
