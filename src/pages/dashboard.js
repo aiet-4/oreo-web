@@ -31,7 +31,7 @@ export default function List() {
 
 
   return (
-    <Grid item container xs={12} sx={{ height: "100svh", width: "100vw" , backgroundColor: primaryColor, position: "relative"}}>
+    <Grid item container xs={12} sx={{ height: "100svh", width: "100vw" , backgroundColor: tertiaryColor, position: "relative"}}>
     </Grid>
   );
 }
