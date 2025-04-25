@@ -24,6 +24,11 @@ const FloatingImage = styled('img')(({ uploadSuccess }) => ({
     animation: `${floatY} 0.2s ease-in-out infinite`,
 }));
 
+const NormalImage = styled('img')(({ uploadSuccess }) => ({
+    width: '100px',
+    height: '100px',
+}));
+
 
 const WebcamContainer = styled(Grid)({
     position: 'absolute',
@@ -164,7 +169,44 @@ const Upload = () => {
             setUploadStatus(false);
           });
       };
-      
+
+
+    const convertImageToBase64 = (imageFile) => {
+        return new Promise((resolve, reject) => {
+        if (!imageFile || !imageFile.type.match('image.*')) {
+            reject(new Error('Please select a valid image file'));
+            return;
+        }
+    
+        const reader = new FileReader();
+        
+        reader.onload = (event) => {
+            const base64String = event.target.result;
+            setFrozenImage(base64String);
+            resolve(base64String);
+        };
+        
+        reader.onerror = (error) => {
+            console.error('Error converting image to base64:', error);
+            reject(error);
+        };
+        
+        reader.readAsDataURL(imageFile);
+        });
+    };
+    
+    const handleFileInputChange = async (event) => {
+        const file = event.target.files[0];
+        if (file) {
+            try {
+                const base64Image = await convertImageToBase64(file);
+                setFrozenImage(base64Image)
+                handleUpload()
+            } catch (error) {
+                console.error("Error converting file to base64:", error);
+            }
+        }
+    };
       
     if (loading) {
         return (
@@ -179,7 +221,7 @@ const Upload = () => {
         <Grid
         container
         sx={{ 
-            height: cameraOpen ? frozenImage? "0%" : "100%" : "70%",
+            height: cameraOpen ? frozenImage? "0%" : "100%" : frozenImage ? "0%" : "70%",
             width: "100%",
             backgroundColor: primaryColor,
             zIndex: 10,
@@ -308,7 +350,7 @@ const Upload = () => {
         <Grid container 
         sx={{ 
             xs: 12, 
-            height: cameraOpen ? frozenImage ? "100%" : "0%" : "30%",
+            height: cameraOpen ? frozenImage ? "100%" : "0%" : frozenImage ? "100%" : "30%",
             width: "100%",
             backgroundColor: frozenImage ? primaryColor : tertiaryColor,
             borderTopLeftRadius: frozenImage ? 0: 30,
@@ -320,6 +362,48 @@ const Upload = () => {
             alignItems: "flex-start"
         }}
         >
+            {
+            cameraOpen || frozenImage? <></> : 
+            <Grid container
+            sx={{
+                width: "100%",
+                height: "100%",
+                justifyContent:'center',
+                alignItems:"center",
+            }}>
+                {/* Hidden file input */}
+                <input 
+                type="file" 
+                accept="image/*" 
+                onChange={handleFileInputChange} 
+                style={{ display: 'none' }} 
+                id="fileInput" 
+                />
+                
+                {/* Clickable container that triggers file input */}
+                <Grid container
+                onClick={() => document.getElementById('fileInput').click()}
+                variant="contained"
+                sx={{
+                color: "#000",
+                height: "100px",
+                width : "100%",
+                boxShadow: "none",
+                px: 12,
+                paddingBottom: 2,
+                justifyContent:"center",
+                alignItems:"flex-start",
+                cursor: "pointer" // Add pointer cursor to indicate it's clickable
+                }}
+                >
+                <NormalImage 
+                    src="https://img.icons8.com/?size=100&id=8Ups04eo5o9m&format=png&color=000000"
+                    alt="icon"
+                />
+                <p style={{width: "100%", textAlign: "center", paddingBottom: 12 }}>Click here to Select an Image from Gallery</p>
+                </Grid>
+            </Grid>
+            }
             <Button
             variant="contained"
             onClick={cameraOpen ? capture : toggleCamera}
@@ -327,7 +411,7 @@ const Upload = () => {
                 position: "absolute",
                 height: cameraOpen ? "65px" : "50px",
                 width: cameraOpen ? "50px" : "250px",
-                top: cameraOpen? -50 : 0,
+                top: cameraOpen? -50 : frozenImage? -50 : 0,
                 left: "50%",
                 transform: "translate(-50%, -50%)",
                 backgroundColor: cameraOpen ? "red" : secondaryColor,
@@ -346,7 +430,7 @@ const Upload = () => {
                 transition: "opacity 0.2s ease-in-out 0.7s",
             }}>{cameraOpen ? "" : "Open Camera"}</p>
             </Button>
-            {cameraOpen && (
+            {(
                 frozenImage ? (
                 <FrozenImageWrapper container sx={{
                     width : pushUpload ? "100%" : "90%",
@@ -387,7 +471,7 @@ const Upload = () => {
                         borderRadius: pushUpload ? 0 : 8,
                         fontSize: 16,
                         transition: "all 0.7s ease-in-out",
-                        border: cameraOpen ? "3px solid #fff" : "none",
+                        border: frozenImage ? "3px solid #fff" : "none",
                         borderLeft: pushUpload ? 0 : "3px solid #fff",
                         borderRight: pushUpload ? 0 : "3px solid #fff",
                         backgroundColor: secondaryColor,

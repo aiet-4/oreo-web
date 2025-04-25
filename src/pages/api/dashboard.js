@@ -1,4 +1,4 @@
-export default function fetchAllFiles() {
+export default async function fetchAllFiles() {
   const myHeaders = new Headers();
   myHeaders.append("Authorization", `Bearer ${process.env.E2E_TOKEN}`);
 
@@ -8,5 +8,6 @@ export default function fetchAllFiles() {
     redirect: "follow"
   };
 
-  return fetch("https://a274ba2959052.notebooks.jarvislabs.net/getAllFiles", requestOptions);
+  const response = await fetch("https://a274ba2959052.notebooks.jarvislabs.net/getAllFiles", requestOptions);
+  return response;
 }
