@@ -1,39 +1,29 @@
 import React, { useEffect, useState, useCallback, useRef } from "react";
 import Webcam from "react-webcam";
 import { useRouter } from 'next/router';
-import { Grid , Typography } from '@mui/material';
+import { Grid , Typography, IconButton } from '@mui/material';
 import CircularProgress from '@mui/material/CircularProgress';
 import Button from '@mui/material/Button';
-import { styled } from '@mui/material/styles';
+import { styled, keyframes } from '@mui/material/styles';
+import CloseIcon from '@mui/icons-material/Close';
+import { uploadReceipt } from "./api/upload";
 
 const primaryColor = "#162a53"
 const secondaryColor = "#f79d35"
 const tertiaryColor = "#fdfbfc"
 
+const floatY = keyframes`
+  0%   { transform: translateY(-2%); }
+  50%  { transform: translateY(2%); }
+  100% { transform: translateY(-2%); }
+`;
 
-const FullScreenContainer = styled('div')({
-  position: 'fixed',
-  top: 0,
-  left: 0,
-  right: 0,
-  bottom: 0,
-  width: '100vw',
-  height: '100vh',
-  overflow: 'hidden',
-  display: 'flex',
-  justifyContent: 'center',
-  alignItems: 'center'
-});
-
-const ButtonBar = styled(Grid)(({ cameraOpen }) => ({
-  position: 'absolute',
-  width: '100%',
-  zIndex: 1000,
-  justifyContent: 'center',
-  alignItems: 'center',
-  bottom: cameraOpen ? '1%' : '45%',
-  transition: 'bottom 0.7s ease-in-out 1.5s',
+const FloatingImage = styled('img')(({ uploadSuccess }) => ({
+    width: '100px',
+    height: '100px',
+    animation: `${floatY} 0.2s ease-in-out infinite`,
 }));
+
 
 const WebcamContainer = styled(Grid)({
     position: 'absolute',
@@ -55,42 +45,28 @@ const StyledWebcam = styled(Webcam)({
 });
 
 const FrozenImageWrapper = styled(Grid)({
-    position: 'absolute',
-    width: '100vw',
-    height: '100vh',
-    display: 'flex',
     justifyContent: 'center',
     alignItems: 'center',
-    animation: 'resizeImage 0.7s ease-in-out forwards, pushUp 0.7s ease-in-out forwards, fadeShadow 0.7s ease-in-out forwards',
-    '@keyframes resizeImage': {
-        to: {
-            width: '90vw',
-            height: '85vh',
-            borderRadius: 8,
-        }
-    },
-    '@keyframes pushUp': {
-        to: {
-            top: '4%',
-        }
-    },
-    '@keyframes fadeShadow': {
-        from: {
-            boxShadow: 'rgba(0, 0, 0, 0.35) 0px 5px 15px'
-        },
-        to: {
-            boxShadow: 'rgba(255, 255, 255, 0.34) 0px 7px 29px 0px'
-        }
-    }
+    width: '90%',
+    height: '85%',
+    borderRadius: "20px"
 });
 
-const FrozenImage = styled('img')({
-    width: '100%',
-    height: '100%',
+const FrozenImage = styled("img")(({ upload }) => ({
+    width: upload ? "0%" : '100%',
+    height: upload ? "0%" : '100%',
     objectFit: 'cover',
-    borderRadius: 8,
-    transition: 'border-radius 0.7s ease-in-out',
-});
+    borderRadius: "20px",
+    boxShadow: 'rgba(255, 255, 255, 0.2) 0px 7px 29px 0px',
+    opacity: 0,
+    transition: "all 0.3s ease-in-out",
+    animation: 'fadeIn 0.5s ease-in-out 0.5s forwards',
+    '@keyframes fadeIn': {
+        to: {
+            opacity: 1
+        }
+    }
+}));
 
 const CustomButton = styled(Button)({
   margin: 5,
@@ -120,6 +96,8 @@ const Upload = () => {
     const [loading, setLoading] = useState(true);
     const [cameraOpen, setCameraOpen] = useState(false);
     const [frozenImage, setFrozenImage] = useState(null);
+    const [pushUpload,setPushUpload] = useState(false)
+    const [uploadStatus, setUploadStatus] = useState(false)
     const webcamRef = useRef(null);
 
     useEffect(() => {
@@ -135,6 +113,15 @@ const Upload = () => {
 
         setLoading(false);
     }, [router.isReady, router.query]);
+
+    useEffect(() => {
+        if(uploadStatus) {
+            setCameraOpen(false)
+            setFrozenImage(null)
+            setPushUpload(false)
+            setUploadStatus(false)
+        }
+    }, [uploadStatus])
 
     const capture = useCallback(() => {
         if (webcamRef.current) {
@@ -159,10 +146,26 @@ const Upload = () => {
     };
 
     const handleUpload = () => {
-        console.log("Uploading image:", frozenImage);
-        // Your upload logic here
-    };
-
+        if (!frozenImage || !employeeId) return;
+      
+        setPushUpload(true);
+        const base64Only = frozenImage.split(',')[1];
+      
+        uploadReceipt(base64Only, employeeId)
+          .then((response) => {
+            if (response.ok) {
+              setUploadStatus(true);
+            }
+            return response.text();
+          })
+          .then((result) => console.log(result))
+          .catch((error) => {
+            console.error(error);
+            setUploadStatus(false);
+          });
+      };
+      
+      
     if (loading) {
         return (
         <LoadingContainer>
@@ -172,11 +175,11 @@ const Upload = () => {
     }
 
   return (
-    <Grid item container xs={12} sx={{ height: "100vh", width: "100vw" , backgroundColor: primaryColor}}>
+    <Grid item container xs={12} sx={{ height: "100svh", width: "100vw" , backgroundColor: primaryColor, position: "relative"}}>
         <Grid
         container
         sx={{ 
-            height: cameraOpen ? "100%" : "60%",
+            height: cameraOpen ? frozenImage? "0%" : "100%" : "70%",
             width: "100%",
             backgroundColor: primaryColor,
             zIndex: 10,
@@ -188,6 +191,27 @@ const Upload = () => {
             position: "relative",
         }}
         >
+        {
+            cameraOpen ?     
+            <Button
+            onClick={toggleCamera}
+            sx={{
+                position: "absolute",
+                top : "2%",
+                left: "2%",
+            }}
+            >
+                <CloseIcon 
+                    sx={{
+                        border: "1px solid #fff",
+                        borderRadius: "50%",
+                        color : "#fff",
+                        fontSize: 28,
+                        zIndex: 1000
+                    }}
+                />
+            </Button> : <></>
+        }
             <Grid sx={{opacity: cameraOpen ? 0 : 1, transition: "opacity 0.7s ease-in-out"}}>
                 <Grid 
                     item
@@ -284,14 +308,16 @@ const Upload = () => {
         <Grid container 
         sx={{ 
             xs: 12, 
-            height: cameraOpen ? "0%" : "40%",
+            height: cameraOpen ? frozenImage ? "100%" : "0%" : "30%",
             width: "100%",
-            backgroundColor: tertiaryColor,
-            borderTopLeftRadius: 30,
-            borderTopRightRadius: 30,
+            backgroundColor: frozenImage ? primaryColor : tertiaryColor,
+            borderTopLeftRadius: frozenImage ? 0: 30,
+            borderTopRightRadius: frozenImage ? 0 : 30,
             zIndex: 20,
             position: "relative",
             transition: "height 0.5s ease-in-out",
+            justifyContent: "center",
+            alignItems: "flex-start"
         }}
         >
             <Button
@@ -311,7 +337,7 @@ const Upload = () => {
                 borderRadius: 8,
                 fontSize: 16,
                 transition: "all 0.7s ease-in-out",
-                border: cameraOpen ? "3px solid #fff" : "none",
+                border: cameraOpen ? "3px solid #fff" : "none"
             }}
             >
             <p 
@@ -320,43 +346,65 @@ const Upload = () => {
                 transition: "opacity 0.2s ease-in-out 0.7s",
             }}>{cameraOpen ? "" : "Open Camera"}</p>
             </Button>
+            {cameraOpen && (
+                frozenImage ? (
+                <FrozenImageWrapper container sx={{
+                    width : pushUpload ? "100%" : "90%",
+                    transition: "all 0.7s ease-in-out"
+                }}>
+                    <Grid container
+                    sx={{
+                        width: '100%',
+                        height: '100%',
+                        justifyContent : "center",
+                        alignItems : "center",
+                        marginTop: "8%",
+                        marginBottom: "5%",
+                        position: "relative"
+                    }}>
+                        <FrozenImage src={frozenImage} alt="Captured" upload={pushUpload}/>
+                        {
+                            pushUpload ? <Grid
+                            sx={{
+                                position : "absolute",
+                                opacity: pushUpload ? 1 : 0,
+                                right: uploadStatus ? "0%" : "35%",
+                                transition: "opacity 1.5s ease-in-out 3s, right 0.7s ease-in-out",
+                            }}>
+                                <FloatingImage 
+                                src="https://img.icons8.com/?size=100&id=499&format=png&color=ffffff"
+                                alt="icon"
+                                />
+                            </Grid> : <></>
+                        }
+                    </Grid>
+                    <Button
+                    variant="contained"
+                    onClick={handleUpload}
+                    sx={{
+                        height: "50px",
+                        width: pushUpload ? "100%" : "250px",
+                        borderRadius: pushUpload ? 0 : 8,
+                        fontSize: 16,
+                        transition: "all 0.7s ease-in-out",
+                        border: cameraOpen ? "3px solid #fff" : "none",
+                        borderLeft: pushUpload ? 0 : "3px solid #fff",
+                        borderRight: pushUpload ? 0 : "3px solid #fff",
+                        backgroundColor: secondaryColor,
+                        transition: "all 0.7s ease-in-out"
+                    }}
+                    >
+                    <p 
+                    style={{
+                        opacity: frozenImage ? 1 : 0, 
+                        transition: "opacity 0.2s ease-in-out 0.7s",
+                    }}>{frozenImage ? pushUpload? "Upload in Progress.." : "Upload" : ""}</p>
+                    </Button>
+                </FrozenImageWrapper>
+                ) : <></>
+                )
+            }
         </Grid>
-      {/* {cameraOpen && (
-        frozenImage ? (
-          <FrozenImageWrapper>
-            <FrozenImage src={frozenImage} alt="Captured" />
-          </FrozenImageWrapper>
-        ) : (
-          <WebcamContainer>
-            <StyledWebcam
-              audio={false}
-              ref={webcamRef}
-              screenshotFormat="image/jpeg"
-              videoConstraints={videoConstraints}
-            />
-          </WebcamContainer>
-        )
-      )}
-      <ButtonBar container cameraOpen={cameraOpen}>
-        <CustomButton 
-          variant="contained" 
-          color="primary" 
-          size="large"
-          onClick={toggleCamera}
-          startIcon={<CameraAltIcon />}
-        >
-          {frozenImage ? 'Retake' : (cameraOpen ? 'Close Camera' : 'Open Camera')}
-        </CustomButton>
-        <CustomButton 
-          variant="contained" 
-          color="primary" 
-          size="large"
-          onClick={cameraOpen ? (frozenImage ? handleUpload : capture) : undefined}
-          startIcon={<CameraAltIcon />}
-        >
-          {frozenImage ? 'Upload Image' : (cameraOpen ? 'Capture Image' : 'Select Image')}
-        </CustomButton>
-      </ButtonBar> */}
     </Grid>
   );
 };

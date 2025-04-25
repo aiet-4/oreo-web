@@ -1,24 +1,17 @@
-export function uploadReceipt(fileInput, employeeId) {
-    // Create FormData instance
-    const formData = new FormData();
-    
-    // Append file and employee ID
-    formData.append("receipt", fileInput.files[0]);
-    formData.append("employee_id", employeeId);
-    
-    // Configure request options
-    const requestOptions = {
-      method: "POST",
-      body: formData,
-      redirect: "follow"
-    };
-    
-    // Send request to the API endpoint
-    return fetch("http://0.0.0.0:8086/processReceipt", requestOptions)
-      .then(response => {
-        if (!response.ok) {
-          throw new Error(`HTTP error! Status: ${response.status}`);
-        }
-        return "Receipt Sent for Processing!";
-      });
-  }
+export function uploadReceipt(base_64_string, employeeId) {
+  const myHeaders = new Headers();
+  myHeaders.append("Authorization", `Bearer ${process.env.E2E_TOKEN}`);
+
+  const formdata = new FormData();
+  formdata.append("receipt_base_64", base_64_string);
+  formdata.append("employee_id", employeeId);
+
+  const requestOptions = {
+    method: "POST",
+    headers: myHeaders,
+    body: formdata,
+    redirect: "follow"
+  };
+
+  return fetch("https://notebooks.e2enetworks.com/tensorboard/notebook/p-4220/n-afb2afa8-c44f-4c9d-a41c-1f7a43954342/processReceipt", requestOptions);
+}
