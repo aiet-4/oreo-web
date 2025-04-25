@@ -179,15 +179,67 @@ const Upload = () => {
         }
     
         const reader = new FileReader();
-        
-        reader.onload = (event) => {
-            const base64String = event.target.result;
-            setFrozenImage(base64String);
-            resolve(base64String);
+        reader.onload = (loadEvent) => {
+            // Create an image element to use for compression
+            const img = new Image();
+            img.src = loadEvent.target.result;
+            
+            img.onload = () => {
+            // Create canvas for compression
+            const canvas = document.createElement('canvas');
+            
+            // Set fixed dimensions to 1200 × 1600
+            const targetWidth = 1200;
+            const targetHeight = 1600;
+            
+            // Set canvas to our target dimensions
+            canvas.width = targetWidth;
+            canvas.height = targetHeight;
+            
+            // Calculate how to fit the image into our target dimensions
+            // while preserving aspect ratio (no cropping)
+            const imgRatio = img.width / img.height;
+            const targetRatio = targetWidth / targetHeight;
+            
+            let drawWidth, drawHeight, offsetX, offsetY;
+            
+            if (imgRatio > targetRatio) {
+                // Image is wider than target ratio
+                drawWidth = targetWidth;
+                drawHeight = drawWidth / imgRatio;
+                offsetX = 0;
+                offsetY = (targetHeight - drawHeight) / 2;
+            } else {
+                // Image is taller than target ratio
+                drawHeight = targetHeight;
+                drawWidth = drawHeight * imgRatio;
+                offsetX = (targetWidth - drawWidth) / 2;
+                offsetY = 0;
+            }
+            
+            // Fill the canvas with white background (to fill any letterboxing)
+            const ctx = canvas.getContext('2d');
+            ctx.fillStyle = "#FFFFFF";
+            ctx.fillRect(0, 0, targetWidth, targetHeight);
+            
+            // Draw image centered on canvas
+            ctx.drawImage(img, offsetX, offsetY, drawWidth, drawHeight);
+            
+            // Get compressed image as base64 data URL
+            const compressedBase64 = canvas.toDataURL('image/jpeg', 0.8);
+            
+            setFrozenImage(compressedBase64);
+            resolve(compressedBase64);
+            };
+            
+            img.onerror = (error) => {
+            console.error('Error loading image for compression:', error);
+            reject(error);
+            };
         };
         
         reader.onerror = (error) => {
-            console.error('Error converting image to base64:', error);
+            console.error('Error reading file:', error);
             reject(error);
         };
         
